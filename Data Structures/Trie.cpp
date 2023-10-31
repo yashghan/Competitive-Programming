@@ -91,110 +91,158 @@ int main() {
 }
 // ------------------------------------------------------------------------------------------------------------------
 // Template - 2 for trie:
-
-#include<bits/stdc++.h>
+#include <bits/stdc++.h>
 #define ll long long
 #define pb push_back
 #define all(x) (x).begin(), (x).end()
 
 using namespace std;
 
-struct node {
-    node * child[26];
-    // no of words having prefix formed till this node
-    ll prefixes;
-    // no of words ending at this node
-    ll count;
+class Trie {
+private:
+    struct Node {
+        Node* child[26];
+        ll prefixes;
+        ll count;
+    };
+
+    Node* root;
+
+public:
+    Trie() {
+        root = newNode();
+    }
+
+    Node* newNode() {
+        Node* temp = new Node();
+        for (int i = 0; i < 26; ++i)
+            temp->child[i] = nullptr;
+        temp->prefixes = temp->count = 0;
+        return temp;
+    }
+
+    void insert(string s) {
+        Node* curr = root;
+        ll n = s.length();
+        curr->prefixes++;
+        for (ll i = 0; i < n; ++i) {
+            if (curr->child[s[i] - 'A'] == nullptr) {
+                Node* temp = newNode();
+                curr->child[s[i] - 'A'] = temp;
+            }
+            curr = curr->child[s[i] - 'A'];
+            curr->prefixes++;
+        }
+        curr->count++;
+    }
+
+    bool search(string s) {
+        Node* curr = root;
+        ll n = s.length();
+        for (ll i = 0; i < n; ++i) {
+            if (curr->child[s[i] - 'A'] == nullptr) {
+                return false; // Character not found in the Trie
+            }
+            curr = curr->child[s[i] - 'A'];
+        }
+        return (curr->count > 0);
+    }
+
+    bool startsWith(string s) {
+        Node* curr = root;
+        ll n = s.length();
+        for (ll i = 0; i < n; i++) {
+            if (curr->child[s[i] - 'A'] == nullptr) {
+                return false;
+            }
+            curr = curr->child[s[i] - 'A'];
+        }
+        return true;
+    }
+
+    ll dfs(ll k) {
+	Node * u = root;
+        return dfs(u, k, 0);
+    }
+
+    ll dfs(Node* u, ll k, ll depth) {
+        if (u->prefixes < k)
+            return 0;
+        ll ans = 0;
+        ll here = u->count;
+        for (int i = 0; i < 26; ++i) {
+            Node* v = u->child[i];
+            if (v == nullptr)
+                continue;
+            ans += dfs(v, k, depth + 1);
+            here += (v->prefixes % k);
+        }
+        ans += depth * (here / k);
+        return ans;
+    }
+
+     bool dfs2(int r, int c, vector<vector<char>> &board, vector<string> &res, string &path){
+        Node * curr = root;
+        return dfs(r, c, board, res, curr, path);
+    }
+
+    bool dfs2(int r, int c, vector<vector<char>> &board, vector<string> &res, Node * curr, string &path){
+        char letter = board[r][c];
+        if (letter == '#') {
+            return false;
+        }
+        
+        curr = curr->child[letter - 'a'];
+        if (curr == nullptr) {
+            return false;
+        }
+
+        path.push_back(letter);
+        board[r][c] = '#'; // Mark the cell as visited
+
+        if (curr->count > 0) {
+            res.push_back(path); // If a word is found in the Trie, add it to the result set
+            curr->count--; // Mark it as visited in the Trie
+        }
+
+        // Explore adjacent cells
+        int dr[] = {1, -1, 0, 0};
+        int dc[] = {0, 0, 1, -1};
+        
+        for (int i = 0; i < 4; i++) {
+            int newRow = r + dr[i];
+            int newCol = c + dc[i];
+            
+            if (newRow >= 0 && newRow < board.size() && newCol >= 0 && newCol < board[0].size()) {
+                dfs(newRow, newCol, board, res, curr, path);
+            }
+        }
+
+        // Restore the cell to its original state
+        board[r][c] = letter;
+        path.pop_back();
+        
+        return true;
+    }
+    
 };
-
-node * newNode() {
-    node * temp = new node();
-    for(int i=0; i<26; ++i)
-        temp->child[i] = NULL;
-    temp->prefixes = temp->count = 0;
-    return temp;
-}
-
-// insert string s into the trie
-void insert(node * root, string s) {
-    node * curr = root;
-    ll n = s.length();
-    curr->prefixes ++;
-    for(ll i=0; i<n; ++i) {
-        if(curr->child[s[i]-'A'] == NULL) {
-            node * temp = newNode();
-            curr->child[s[i]-'A'] = temp;
-        }
-        curr = curr->child[s[i]-'A'];
-        // curr will be a prefix of s
-        curr->prefixes ++;
-    }
-    // string ends at curr
-    curr->count++;
-}
-
-bool search(node * root, string s) {
-    node * curr = root;
-    ll n = s.length();
-    for (ll i = 0; i < n; ++i) {
-        if (curr->child[s[i] - 'A'] == NULL) {
-            return false; // Character not found in the Trie
-        }
-        curr = curr->child[s[i] - 'A'];
-    }
-    // If we reached the end of the string and the count at the last node is greater than 0, it means the string is in the Trie
-    return (curr->count > 0);
-}
-
-bool startsWith(node * root, strings s){
-	node * curr = root;
-    ll n = s.length();
-    for(ll i = 0; i < n; i++){
-        if(curr->child[s[i] - 'A'] == NULL){
-         	return false;  	
-        }
-        curr = curr->child[s[i] - 'A'];
-    }
-    return true;
-}
-
-ll dfs(node * u, ll k, ll depth) {
-    // if cannot group into sets of k words
-    if(u->prefixes < k)
-        return 0;
-    ll ans = 0;
-    // here = no of strings ending at this node
-    ll here = u->count;
-    for(int i=0; i<26; ++i) {
-        // v is child node
-        node * v = u->child[i];
-        if(v == NULL)
-            continue;
-        // add child ans
-        ans += dfs(v, k, depth + 1);
-        // add child residues to 'here'
-        here += (v->prefixes % k);
-    }
-    // finally, ans = child_ans + sum of scores of groups formed by strings counted by 'here'
-    ans += depth * (here / k);
-    return ans;
-}
 
 int main() {
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
     int t;
-    cin>>t;
-    for(int tc=1; tc<=t; ++tc) {
+    cin >> t;
+    for (int tc = 1; tc <= t; ++tc) {
         ll n, k;
-        cin>>n>>k;
-        node * trie = newNode();
-        for(ll i=0; i<n; ++i) {
+        cin >> n >> k;
+        Trie trie;
+        for (ll i = 0; i < n; ++i) {
             string s;
-            cin>>s;
-            insert(trie, s);
+            cin >> s;
+            trie.insert(s);
         }
-        ll ans = dfs(trie, k, 0);
-        cout<<"Case #"<<tc<<": "<<ans<<endl;
-    }    
+        ll ans = trie.dfs(k);
+        cout << "Case #" << tc << ": " << ans << endl;
+    }
 }
+
